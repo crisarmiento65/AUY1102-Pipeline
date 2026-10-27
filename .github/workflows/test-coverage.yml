@@ -1,0 +1,49 @@
+name: Unit Tests & Coverage
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests with coverage
+        run: npx jest --coverage --verbose 2>&1 | tee test-output.txt
+
+      - name: Show test summary
+        if: always()
+        run: |
+          echo "========================================="
+          echo "  RESUMEN DE PRUEBAS UNITARIAS"
+          echo "========================================="
+          echo ""
+          echo "--- Tests que fallaron ---"
+          grep -E "FAIL|✕|✗" test-output.txt || echo "Ninguno - Todos los tests pasaron correctamente"
+          echo ""
+          echo "--- Cobertura de codigo ---"
+          grep -A 100 "^---------" test-output.txt | head -50
+          echo ""
+          echo "--- Codigo no cubierto ---"
+          grep -E "\|.*[0-9]+-[0-9]+|Uncovered" test-output.txt || echo "Todo el codigo esta cubierto"
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
